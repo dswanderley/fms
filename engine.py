@@ -87,3 +87,5 @@ def evaluate(model, data_loader, dataset, device):
     for ap_metric, iou in zip(AP, np.arange(0.5, 1, 0.05)):
         print("\tAP at IoU level [{:.2f}]: {:.3f}".format(iou, ap_metric))
 
+    return mAP, AP
+

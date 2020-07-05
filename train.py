@@ -12,22 +12,23 @@ from models.backbones import get_backbone
 
 """ Training parameters """
 
-DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
-#DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
+#DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
+DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
 
 SAVE_MODEL = ('fasterRCNN')
 
-backbone_name = 'resnext101'
+backbone_name = 'resnet18'
 
 # number of processes 
-num_workers = 4         # 4 for VISUM VM and 1 for our Windows machines
+num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
 
 # Training epochs
 num_epochs = 50
 
 # Number of images in a batch
-batch_size = 18
+batch_size = 12
 
+val_mAP = 0
 
 """ Training script """
 
@@ -117,4 +118,7 @@ if __name__ == '__main__':
         # evaluate on the validation dataset
         evaluator = evaluate(model, data_loader_val, dataset_val, device)
 
-        torch.save(model, SAVE_MODEL)
+        if val_mAP < evaluator[0]:
+            torch.save(model, SAVE_MODEL)
+            print('Model Saved. mAP = %1.6f' % val_mAP)
+
