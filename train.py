@@ -12,18 +12,21 @@ from models.backbones import get_backbone
 
 """ Training parameters """
 
-DATA_DIR = '/home/master/dataset/train/'    # VISUM VM path
-# DATA_DIR = '../dataset/train/'            # Your PC path 
+#DATA_DIR = '/home/master/dataset/train/'    # VISUM VM path
+# DATA_DIR = r'C:\\Users\\JoanneHoe\\...\\dataset\\train\\' # Your PC path, don't forget the backslash in the end
 
 SAVE_MODEL = ('fasterRCNN')
 
 backbone_name = 'resnext101'
 
 # number of processes 
-num_workers = 4         # 4 for VISUM VM and 1 for our Windows machines
+num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
 
 # Training epochs
 num_epochs = 50
+
+# Number of images in a batch
+batch_size = 4
 
 
 """ Training script """
@@ -86,11 +89,11 @@ if __name__ == '__main__':
 
     # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
-        dataset_sub, batch_size=6, shuffle=True, num_workers=1, collate_fn=utils.collate_fn
+        dataset_sub, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=utils.collate_fn
     )
 
     data_loader_val = torch.utils.data.DataLoader(
-        dataset_val_sub, batch_size=6, shuffle=False, num_workers=1, collate_fn=utils.collate_fn
+        dataset_val_sub, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=utils.collate_fn
     )
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
