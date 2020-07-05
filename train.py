@@ -119,6 +119,7 @@ if __name__ == '__main__':
         evaluator = evaluate(model, data_loader_val, dataset_val, device)
 
         if val_mAP < evaluator[0]:
+            val_mAP = evaluator[0]
             torch.save(model, SAVE_MODEL)
             print('Model Saved. mAP = %1.6f' % val_mAP)
 
