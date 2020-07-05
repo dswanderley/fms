@@ -7,93 +7,111 @@ from engine import train_one_epoch, evaluate
 import utils
 from dataset import Dataset
 from transforms import get_transform
+from models.backbones import get_backbone
 
-DATA_DIR = '/home/master/dataset/train/'
+
+""" Training parameters """
+
+DATA_DIR = '/home/master/dataset/train/'    # VISUM VM path
+# DATA_DIR = '../dataset/train/'            # Your PC path 
+
 SAVE_MODEL = ('fasterRCNN')
 
-# load a pre-trained model for classification and return
-# only the features
-backbone = torchvision.models.mobilenet_v2(pretrained=True).features
-# FasterRCNN needs to know the number of
-# output channels in a backbone. For mobilenet_v2, it's 12img
-# so we need to add it here
-backbone.out_channels = 1280
+backbone_name = 'resnext101'
 
-# let's make the RPN generate 5 x 3 anchors per spatial
-# location, with 5 different sizes and 3 different aspect
-# ratios. We have a Tuple[Tuple[int]] because each featureimg
-# map could potentially have different sizes and
-# aspect ratios
-anchor_generator = AnchorGenerator(
-    sizes=((32, 64, 128, 256),), aspect_ratios=((0.5, 1.0, 2.0),)
-)
+# number of processes 
+num_workers = 4         # 4 for VISUM VM and 1 for our Windows machines
 
-# let's define what are the feature maps that we will
-# use to perform the region of interest cropping, as well as
-# the size of the crop after rescaling.
-# if your backbone returns a Tensor, featmap_names is expected to
-# be [0]. More generally, the backbone should return an
-# OrderedDict[Tensor], and in featmap_names you can choose which
-# feature maps to use
-roi_pooler = torchvision.ops.MultiScaleRoIAlign(
-    featmap_names=["0"], output_size=7, sampling_ratio=2
-)
+# Training epochs
+num_epochs = 50
 
 
-# put the pieces together inside a FasterRCNN model
-# one class for fish, other for the backgroud
-model = FasterRCNN(
-    backbone,
-    num_classes=2,
-    rpn_anchor_generator=anchor_generator,
-    box_roi_pool=roi_pooler,
-    min_size=300, max_size=300
-)
+""" Training script """
 
-# See the model architecture
-print(model)
+if __name__ == '__main__':
+        
+    # load a pre-trained model for classification and return
+    # only the features
+    backbone, out_channels = get_backbone(backbone_name, pretrained=True)
 
-# use our dataset and defined transformations
-dataset = Dataset(DATA_DIR, transforms=get_transform(train=True))
-dataset_val = Dataset(DATA_DIR, transforms=get_transform(train=False))
+    # FasterRCNN needs to know the number of
+    # output channels in a backbone. For mobilenet_v2, it's 12img
+    # so we need to add it here
+    backbone.out_channels = out_channels
 
-# split the dataset into train and validation sets
-torch.manual_seed(1)
-indices = torch.randperm(len(dataset)).tolist()
+    # let's make the RPN generate 5 x 3 anchors per spatial
+    # location, with 5 different sizes and 3 different aspect
+    # ratios. We have a Tuple[Tuple[int]] because each featureimg
+    # map could potentially have different sizes and
+    # aspect ratios
+    anchor_generator = AnchorGenerator(
+        sizes=((32, 64, 128, 256),), aspect_ratios=((0.5, 1.0, 2.0),)
+    )
 
-dataset_sub = torch.utils.data.Subset(dataset, indices[:-500])
-dataset_val_sub = torch.utils.data.Subset(dataset_val, indices[-500:])
+    # let's define what are the feature maps that we will
+    # use to perform the region of interest cropping, as well as
+    # the size of the crop after rescaling.
+    # if your backbone returns a Tensor, featmap_names is expected to
+    # be [0]. More generally, the backbone should return an
+    # OrderedDict[Tensor], and in featmap_names you can choose which
+    # feature maps to use
+    roi_pooler = torchvision.ops.MultiScaleRoIAlign(
+        featmap_names=["0"], output_size=7, sampling_ratio=2
+    )
 
-# define training and validation data loaders
-data_loader = torch.utils.data.DataLoader(
-    dataset_sub, batch_size=6, shuffle=True, num_workers=4, collate_fn=utils.collate_fn
-)
 
-data_loader_val = torch.utils.data.DataLoader(
-    dataset_val_sub, batch_size=6, shuffle=False, num_workers=4, collate_fn=utils.collate_fn
-)
+    # put the pieces together inside a FasterRCNN model
+    # one class for fish, other for the backgroud
+    model = FasterRCNN(
+        backbone,
+        num_classes=2,
+        rpn_anchor_generator=anchor_generator,
+        box_roi_pool=roi_pooler,
+        min_size=300, max_size=300
+    )
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-print(device)
+    # See the model architecture
+    print(model)
 
-model.to(device)
+    # use our dataset and defined transformations
+    dataset = Dataset(DATA_DIR, transforms=get_transform(train=True))
+    dataset_val = Dataset(DATA_DIR, transforms=get_transform(train=False))
 
-# define an optimizer
-params = [p for p in model.parameters() if p.requires_grad]
-optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+    # split the dataset into train and validation sets
+    torch.manual_seed(1)
+    indices = torch.randperm(len(dataset)).tolist()
 
-# and a learning rate scheduler which decreases the learning rate
-lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
+    dataset_sub = torch.utils.data.Subset(dataset, indices[:-500])
+    dataset_val_sub = torch.utils.data.Subset(dataset_val, indices[-500:])
 
-num_epochs = 20
+    # define training and validation data loaders
+    data_loader = torch.utils.data.DataLoader(
+        dataset_sub, batch_size=6, shuffle=True, num_workers=1, collate_fn=utils.collate_fn
+    )
 
-for epoch in range(num_epochs):
-    # train for one epoch, printing every 10 iterations
-    epoch_loss = train_one_epoch(model, optimizer, data_loader,
-                                    device, epoch, print_freq=10)
-    # update the learning rate
-    lr_scheduler.step()
-    # evaluate on the validation dataset
-    evaluator = evaluate(model, data_loader_val, dataset_val, device)
+    data_loader_val = torch.utils.data.DataLoader(
+        dataset_val_sub, batch_size=6, shuffle=False, num_workers=1, collate_fn=utils.collate_fn
+    )
 
-    torch.save(model, SAVE_MODEL)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    print(device)
+
+    model.to(device)
+
+    # define an optimizer
+    params = [p for p in model.parameters() if p.requires_grad]
+    optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+
+    # and a learning rate scheduler which decreases the learning rate
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
+
+    for epoch in range(num_epochs):
+        # train for one epoch, printing every 10 iterations
+        epoch_loss = train_one_epoch(model, optimizer, data_loader,
+                                        device, epoch, print_freq=10)
+        # update the learning rate
+        lr_scheduler.step()
+        # evaluate on the validation dataset
+        evaluator = evaluate(model, data_loader_val, dataset_val, device)
+
+        torch.save(model, SAVE_MODEL)
