@@ -31,33 +31,43 @@ def get_backbone(name, pretrained=True):
     # ResNet
     elif name == 'resnet18':
         resnet = models.resnet18(pretrained=pretrained)
-        modules = list(resnet.children())[:-1]
+        modules = list(resnet.children())[:-2]
         backbone = nn.Sequential(*modules)
         out_channels = 512
     elif name == 'resnet34':
         resnet = models.resnet34(pretrained=pretrained)
-        modules = list(resnet.children())[:-1]
+        modules = list(resnet.children())[:-2]
         backbone = nn.Sequential(*modules)
         out_channels = 512
     elif name == 'resnet50':
         resnet = models.resnet50(pretrained=pretrained)
-        modules = list(resnet.children())[:-1]
+        modules = list(resnet.children())[:-2]
         backbone = nn.Sequential(*modules)
         out_channels = 2048
     elif name == 'resnet101':
         resnet = models.resnet101(pretrained=pretrained)
-        modules = list(resnet.children())[:-1]
+        modules = list(resnet.children())[:-2]
         backbone = nn.Sequential(*modules)
         out_channels = 2048
     # ResNeXt
     elif name == 'resnext50':
         resnext = models.resnext50_32x4d(pretrained=pretrained)
-        modules = list(resnext.children())[:-1]
+        modules = list(resnext.children())[:-2]
         backbone = nn.Sequential(*modules)
         out_channels = 2048
     elif name == 'resnext101':
         resnext = models.resnext101_32x8d(pretrained=pretrained)
-        modules = list(resnext.children())[:-1]
+        modules = list(resnext.children())[:-2]
+        backbone = nn.Sequential(*modules)
+        out_channels = 2048
+    elif name == 'wide_resnet50':
+        w_resnet = models.wide_resnet50_2(pretrained=pretrained)
+        modules = list(w_resnet.children())[:-2]
+        backbone = nn.Sequential(*modules)
+        out_channels = 2048
+    elif name == 'wide_resnet101':
+        w_resnet = models.wide_resnet101_2(pretrained=pretrained)
+        modules = list(w_resnet.children())[:-2]
         backbone = nn.Sequential(*modules)
         out_channels = 2048
     # Error
@@ -67,11 +77,10 @@ def get_backbone(name, pretrained=True):
     return backbone, out_channels
 
 
-
-
 if __name__ == "__main__":
     from torch.autograd import Variable
 
-    my_backbone, channels = get_backbone('resnext101', pretrained=True)
+    my_backbone, channels = get_backbone('resnet18', pretrained=True)
 
-    print('')
+    print(my_backbone)
+    print('end')

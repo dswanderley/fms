@@ -12,21 +12,21 @@ from models.backbones import get_backbone
 
 """ Training parameters """
 
-#DATA_DIR = '/home/master/dataset/train/'    # VISUM VM path
-# DATA_DIR = r'C:\\Users\\JoanneHoe\\...\\dataset\\train\\' # Your PC path, don't forget the backslash in the end
+DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
+#DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
 
 SAVE_MODEL = ('fasterRCNN')
 
 backbone_name = 'resnext101'
 
 # number of processes 
-num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
+num_workers = 4         # 4 for VISUM VM and 1 for our Windows machines
 
 # Training epochs
 num_epochs = 50
 
 # Number of images in a batch
-batch_size = 4
+batch_size = 18
 
 
 """ Training script """
