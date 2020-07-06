@@ -9,6 +9,7 @@ Created on Mon Apr 27 19:55:10 2020
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import torch.nn.functional as K
 
 
 def get_backbone(name, pretrained=True):
@@ -57,21 +58,14 @@ class ResNetBackbone(nn.Module):
     '''
     ResNet backbone for Feature Pyramid Net.
     '''
-    def __init__(self, in_channels=3, backbone_model='resnet50', pretrained=True):
+    def __init__(self, backbone_model='resnet50', pretrained=True):
         super(ResNetBackbone, self).__init__()
-        # set parameters
-        self.in_channels = in_channels
-        # adjust channels
-        if in_channels != 3:
-            self.conv0 = nn.Conv2d(in_channels, 3, 1, stride=1, padding=0, bias=False)
-            self.bn0 = nn.BatchNorm2d(3)
-            self.conv0.weight.data.fill_(1/in_channels)
-        self.relu = nn.ReLU(inplace=True)
         # load backbone
         backbone, feature_sizes, _ = get_backbone(backbone_model, pretrained=pretrained)
         # backbone input conv
         self.conv1 = backbone.conv1
         self.bn1 = backbone.bn1
+        self.relu = nn.ReLU(inplace=True)
         #self.relu = self.backbone.relu
         self.maxpool = backbone.maxpool
         # Sequence 1
@@ -94,11 +88,6 @@ class ResNetBackbone(nn.Module):
             self.layer4.load_state_dict(backbone.layer4.state_dict())
 
     def forward(self, x):
-        # adjust input channels
-        if self.in_channels != 3:
-            x = self.conv0(x)
-            x = self.bn0(x)
-            x = self.relu(x)
         # backbone input conv
         x0 = self.conv1(x)
         x0 = self.bn1(x0)
@@ -117,15 +106,14 @@ class PyramidFeatures(nn.Module):
     '''
     Features Pyramid Network
     '''
-    def __init__(self, in_channels=3, num_features=256, backbone_name='resnet50', pretrained=False):
+    def __init__(self, num_features=256, backbone_name='resnet50', pretrained=False):
         super(PyramidFeatures, self).__init__()
         # parametes
-        self.in_channels = in_channels
         self.num_features = num_features
         self.backbone_name = backbone_name
         self.pretrained = pretrained
         # Bottom-up pathway
-        self.backbone = ResNetBackbone(in_channels=in_channels, backbone_model=backbone_name, pretrained=pretrained)
+        self.backbone = ResNetBackbone(backbone_model=backbone_name, pretrained=pretrained)
         # Lateral convolution pathway
         self.latlayer1 = nn.Conv2d(self.backbone.fpn_sizes[2], num_features, kernel_size=1, stride=1, padding=0)
         self.latlayer2 = nn.Conv2d(self.backbone.fpn_sizes[1], num_features, kernel_size=1, stride=1, padding=0)
@@ -145,6 +133,8 @@ class PyramidFeatures(nn.Module):
     def forward(self, x):
         # Bottom-up pathway
         c3, c4, c5 = self.backbone(x)
+        self.upsample1 = nn.Upsample(size=c4.shape[-2:], mode='nearest')
+        self.upsample2 = nn.Upsample(size=c3.shape[-2:], mode='nearest')
         # High level output
         p6 = self.conv6(c5)
         p7 = self.relu(p6)
@@ -159,16 +149,44 @@ class PyramidFeatures(nn.Module):
         p5 = self.toplayer1(p5)
         p4 = self.toplayer2(p4)
         p3 = self.toplayer3(p3)
-
         # Output from lower to higher level (larger to smaller spatial size)
         return p3, p4, p5, p6, p7
+
+
+class GroupedPyramidFeatures(nn.Module):
+    '''
+    Grouped Features Pyramid Network
+    '''
+    def __init__(self, num_features=256, backbone_name='resnet50', pretrained=False):
+        super(GroupedPyramidFeatures, self).__init__()
+
+        # parametes
+        self.num_features = num_features
+        self.backbone_name = backbone_name
+        self.pretrained = pretrained
+        # Network
+        self.fpn = PyramidFeatures(num_features = num_features, backbone_name = backbone_name, pretrained = pretrained)
+
+    
+    def forward(self, x):
+
+        p3, p4, p5, p6, p7 = self.fpn(x)
+        out_size = p3.shape[-2:]   
+
+        p7_up = K.upsample(p7, size=out_size, mode='nearest')
+        p6_up = K.upsample(p6, size=out_size, mode='nearest')
+        p5_up = K.upsample(p5, size=out_size, mode='nearest')
+        p4_up = K.upsample(p4, size=out_size, mode='nearest')
+
+        return p3, p4_up, p5_up, p6_up, p7_up
+
 
 
 if __name__ == "__main__":
     from torch.autograd import Variable
 
-    net = PyramidFeatures(in_channels=1, backbone_name='resnext50')
-    preds = net( Variable( torch.randn(2,1,512,512) ) )
+    net = GroupedPyramidFeatures(backbone_name='resnet50',  pretrained=True)
+    preds = net( Variable( torch.randn(2,3,840,600) ) )
 
     for p in preds:
         print(p.shape)
