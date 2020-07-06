@@ -42,6 +42,48 @@ class RandomHorizontalFlip(object):
         return image, target
 
 
+class RandomVerticalFlip(object):
+    def __init__(self, prob):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            height, width = image.shape[-2:]
+            image = image.flip(1)   # flip img vertically
+            bbox = target["boxes"]
+            bbox[:, [1, 3]] = height - bbox[:, [3, 1]]  # flip bbox upside down
+            target["boxes"] = bbox
+
+            # Debug
+            """
+            import matplotlib.pyplot as plt
+            import matplotlib.patches as pat
+            
+            if bbox.shape[0] != 0:
+                img = image
+                fig, ax = plt.subplots(1)
+                plt.imshow(  img.permute(1, 2, 0)  )
+                rect = pat.Rectangle([int(bbox[0, 0]), int(bbox[0, 1])], # x, y
+                                     int(bbox[0, 2] - bbox[0, 0]),  # w
+                                     int(bbox[0, 3] - bbox[0, 1]),  # h
+                                     edgecolor='r', linewidth=3, fill=False)
+                ax.add_patch(rect)
+                plt.show()
+                a = 1
+            """
+            if "masks" in target:
+                target["masks"] = target["masks"].flip(1)  # flip masks upside down
+
+            # TODO: check this code
+            """
+            if "keypoints" in target:
+                keypoints = target["keypoints"]
+                keypoints = _flip_coco_person_keypoints(keypoints, height)
+                target["keypoints"] = keypoints
+            """
+        return image, target
+
+
 class ToTensor(object):
     def __call__(self, image, target):
         image = F.to_tensor(image)
@@ -56,6 +98,7 @@ def get_transform(train):
         # during training, randomly flip the training images
         # and ground-truth for data augmentation
         transforms.append(RandomHorizontalFlip(0.5))
+        transforms.append(RandomVerticalFlip(0.5))
     return Compose(transforms)
 
 # transform for images only (no labels)
