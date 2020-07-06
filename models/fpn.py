@@ -118,10 +118,6 @@ class PyramidFeatures(nn.Module):
         self.latlayer1 = nn.Conv2d(self.backbone.fpn_sizes[2], num_features, kernel_size=1, stride=1, padding=0)
         self.latlayer2 = nn.Conv2d(self.backbone.fpn_sizes[1], num_features, kernel_size=1, stride=1, padding=0)
         self.latlayer3 = nn.Conv2d(self.backbone.fpn_sizes[0], num_features, kernel_size=1, stride=1, padding=0)
-         # High level feature maps
-        self.conv6 = nn.Conv2d(self.backbone.fpn_sizes[2], num_features, kernel_size=3, stride=2, padding=1)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv7 = nn.Conv2d( num_features, num_features, kernel_size=3, stride=2, padding=1)
         # Top-down pathway
         self.upsample1 = nn.Upsample(scale_factor=2, mode='nearest')
         self.upsample2 = nn.Upsample(scale_factor=2, mode='nearest')
@@ -135,10 +131,6 @@ class PyramidFeatures(nn.Module):
         c3, c4, c5 = self.backbone(x)
         self.upsample1 = nn.Upsample(size=c4.shape[-2:], mode='nearest')
         self.upsample2 = nn.Upsample(size=c3.shape[-2:], mode='nearest')
-        # High level output
-        p6 = self.conv6(c5)
-        p7 = self.relu(p6)
-        p7 = self.conv7(p7)
         # Top-down pathway
         p5 = self.latlayer1(c5)
         p4 = self.latlayer2(c4)
@@ -150,7 +142,7 @@ class PyramidFeatures(nn.Module):
         p4 = self.toplayer2(p4)
         p3 = self.toplayer3(p3)
         # Output from lower to higher level (larger to smaller spatial size)
-        return p3, p4, p5, p6, p7
+        return p3, p4, p5
 
 
 class GroupedPyramidFeatures(nn.Module):
@@ -167,21 +159,19 @@ class GroupedPyramidFeatures(nn.Module):
         # Network
         self.fpn = PyramidFeatures(num_features = num_features, backbone_name = backbone_name, pretrained = pretrained)
         # Output
-        self.conv = nn.Conv2d(num_features*5, out_features, kernel_size=3, stride=1, padding=1)
+        self.conv = nn.Conv2d(num_features * 3, out_features, kernel_size=3, stride=1, padding=1)
 
     
     def forward(self, x):
 
-        p3, p4, p5, p6, p7 = self.fpn(x)
+        p3, p4, p5 = self.fpn(x)
         
         out_size = p3.shape[-2:]
 
-        p7_up = K.upsample(p7, size=out_size, mode='nearest')
-        p6_up = K.upsample(p6, size=out_size, mode='nearest')
         p5_up = K.upsample(p5, size=out_size, mode='nearest')
         p4_up = K.upsample(p4, size=out_size, mode='nearest')
 
-        out  = torch.cat((p3, p4_up, p5_up, p6_up, p7_up), 1)
+        out  = torch.cat((p3, p4_up, p5_up), 1)
         
         out = self.conv(out) 
 

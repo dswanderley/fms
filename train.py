@@ -16,8 +16,8 @@ from models.fpn import GroupedPyramidFeatures
 #DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
 DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
 
-SAVE_MODEL = ('fasterRCNN')
-load_weigths = True
+SAVE_MODEL = ('fasterRCNN_resnet18_fpn3')
+load_weigths = False
 
 backbone_name = 'resnet18'
 fpn = True
