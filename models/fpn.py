@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 27 19:55:10 2020
-@author: Diego Wanderley
+Created on Mon Jul 06 10:55:10 2020
+@author: Diego Wanderley, Filipa Rocha, Henrique Carvalho
 @python: 3.6
-@description: Feature Pyramid Network class and auxiliary classes.
+@description: Proposed Grouped Feature Pyramid Network class and auxiliary classes.
 """
 
 import torch

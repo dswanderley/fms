@@ -9,6 +9,7 @@ from dataset import Dataset
 from transforms import get_transform
 from models.backbones import get_backbone
 from models.fpn import GroupedPyramidFeatures
+from models.deeplab import DeepLabv3
 
 
 """ Training parameters """
@@ -16,11 +17,13 @@ from models.fpn import GroupedPyramidFeatures
 #DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
 DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
 
-SAVE_MODEL = ('fasterRCNN')
-load_weigths = True
-
-backbone_name = 'resnet18'
-fpn = True
+# Backbone name
+backbone_name = 'resnet50'
+# Neck name
+neck_name  = 'deeplab' # 'fpn'  # 'None'
+# Weights definitions
+load_weigths = False
+SAVE_MODEL = ('fasterRCNN_' + str(backbone_name) + '_' + str(neck_name) )
 
 # number of processes 
 num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
@@ -29,8 +32,9 @@ num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
 num_epochs = 50
 
 # Number of images in a batch
-batch_size = 12
+batch_size = 6
 
+# Save condition
 val_mAP = 0
 
 
@@ -40,9 +44,12 @@ if __name__ == '__main__':
         
     # load a pre-trained model for classification and return
     # only the features
-    if fpn:
+    if neck_name == 'fpn':
         out_channels = 256
         backbone = GroupedPyramidFeatures(backbone_name=backbone_name, out_features=out_channels, pretrained=True)
+    elif neck_name == 'deeplab':
+        out_channels = 256
+        backbone = DeepLabv3(n_classes=out_channels, backbone_name=backbone_name, pretrained=True)
     else:
         backbone, out_channels = get_backbone(backbone_name, pretrained=True)
 
