@@ -8,6 +8,7 @@ import utils
 from dataset import Dataset
 from transforms import get_transform
 from models.backbones import get_backbone
+from models.fpn import GroupedPyramidFeatures
 
 
 """ Training parameters """
@@ -16,8 +17,10 @@ from models.backbones import get_backbone
 DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
 
 SAVE_MODEL = ('fasterRCNN')
+load_weigths = True
 
 backbone_name = 'resnet18'
+fpn = True
 
 # number of processes 
 num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
@@ -30,13 +33,18 @@ batch_size = 12
 
 val_mAP = 0
 
+
 """ Training script """
 
 if __name__ == '__main__':
         
     # load a pre-trained model for classification and return
     # only the features
-    backbone, out_channels = get_backbone(backbone_name, pretrained=True)
+    if fpn:
+        out_channels = 256
+        backbone = GroupedPyramidFeatures(backbone_name=backbone_name, out_features=out_channels, pretrained=True)
+    else:
+        backbone, out_channels = get_backbone(backbone_name, pretrained=True)
 
     # FasterRCNN needs to know the number of
     # output channels in a backbone. For mobilenet_v2, it's 12img
@@ -100,6 +108,8 @@ if __name__ == '__main__':
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(device)
 
+    if load_weigths:
+        model = torch.load(SAVE_MODEL)
     model.to(device)
 
     # define an optimizer
@@ -122,4 +132,3 @@ if __name__ == '__main__':
             val_mAP = evaluator[0]
             torch.save(model, SAVE_MODEL)
             print('Model Saved. mAP = %1.6f' % val_mAP)
-

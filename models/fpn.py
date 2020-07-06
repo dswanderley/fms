@@ -157,7 +157,7 @@ class GroupedPyramidFeatures(nn.Module):
     '''
     Grouped Features Pyramid Network
     '''
-    def __init__(self, num_features=256, backbone_name='resnet50', pretrained=False):
+    def __init__(self, out_features=256, num_features=256, backbone_name='resnet50', pretrained=False):
         super(GroupedPyramidFeatures, self).__init__()
 
         # parametes
@@ -166,19 +166,26 @@ class GroupedPyramidFeatures(nn.Module):
         self.pretrained = pretrained
         # Network
         self.fpn = PyramidFeatures(num_features = num_features, backbone_name = backbone_name, pretrained = pretrained)
+        # Output
+        self.conv = nn.Conv2d(num_features*5, out_features, kernel_size=3, stride=1, padding=1)
 
     
     def forward(self, x):
 
         p3, p4, p5, p6, p7 = self.fpn(x)
-        out_size = p3.shape[-2:]   
+        
+        out_size = p3.shape[-2:]
 
         p7_up = K.upsample(p7, size=out_size, mode='nearest')
         p6_up = K.upsample(p6, size=out_size, mode='nearest')
         p5_up = K.upsample(p5, size=out_size, mode='nearest')
         p4_up = K.upsample(p4, size=out_size, mode='nearest')
 
-        return p3, p4_up, p5_up, p6_up, p7_up
+        out  = torch.cat((p3, p4_up, p5_up, p6_up, p7_up), 1)
+        
+        out = self.conv(out) 
+
+        return out
 
 
 
