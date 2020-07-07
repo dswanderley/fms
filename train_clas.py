@@ -14,7 +14,7 @@ num_workers = 1
 DATA_DIR = '../dataset/train/'
 
 @torch.no_grad()
-def evaluate_model(model, data_loader_val, epoch):
+def evaluate_model(model, data_loader_val, criterion, epoch):
 
     model.eval()
 
@@ -22,17 +22,25 @@ def evaluate_model(model, data_loader_val, epoch):
         a = 1
         images, labels = images.to(device), labels.to(device)
         outputs = model.forward(images)
-        
+
+        loss = criterion(outputs, labels)
+
         error = labels - outputs
 
         if idx == 0:
             error_cat = error
+            loss_cat = loss
         else:
             error_cat = torch.cat([error_cat, error], 0)
+            loss_cat = torch.cat([loss_cat, error], 0)
 
     error = 100 * torch.mean(torch.abs(error_cat), 0)
 
-    print("EPOCH", epoch, ":", "Fish error", error[0].item(), "Background error", error[1].item())
+    loss = torch.mean(torch.abs(loss_cat), 0)
+
+    print("EPOCH", epoch, ":", "Fish error", error[0].item(), "Background error", error[1].item(), "Loss", loss)
+
+    return loss, error
 
 """ Training script """
 if __name__ == '__main__':
@@ -74,6 +82,7 @@ if __name__ == '__main__':
     #optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = torch.optim.Adam(model.parameters())
 
+    best_loss = float("inf")
 
     for epoch in range(num_epochs):
 
@@ -96,15 +105,13 @@ if __name__ == '__main__':
 
             print("batch", idx, "/", len(data_loader)-1, "loss :", loss.item())
 
-        evaluate_model(model, data_loader_val, criterion, epoch)
+        new_loss, error = evaluate_model(model, data_loader_val, criterion, epoch)
 
+        if best_loss > new_loss:
+            torch.save(model, "resnet18_classifier")
+            print('Model Saved. error', error)
 
-            # VAL
-
-
-
-
-
+    torch.save(model, "resnet18_final")
 
 # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
 
