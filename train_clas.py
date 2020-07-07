@@ -4,6 +4,7 @@ import torch.nn as nn
 import torchvision.models as models
 from dataset import Dataset
 from transforms import get_transform
+from resnet_class import resnet18_classifier
 
 
 pretrained = True
@@ -21,7 +22,7 @@ def evaluate_model(model, data_loader_val, epoch):
         a = 1
         images, labels = images.to(device), labels.to(device)
         outputs = model.forward(images)
-
+        
         error = labels - outputs
 
         if idx == 0:
@@ -39,9 +40,10 @@ if __name__ == '__main__':
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(device)
 
-    model = models.resnet18(pretrained=pretrained)
+    backbone = models.resnet18(pretrained=pretrained)
     #model = models.resnext50_32x4d(pretrained=pretrained)
-    model.fc = nn.Linear(512, 2)
+
+    model = resnet18_classifier(backbone)
 
     #if load_weigths:
     #    model = torch.load(SAVE_MODEL)
