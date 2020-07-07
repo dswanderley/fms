@@ -9,7 +9,7 @@ Created on Mon Jul 06 10:55:10 2020
 import torch
 import torch.nn as nn
 import torchvision.models as models
-import torch.nn.functional as K
+import torch.nn.functional as F
 
 
 def get_backbone(name, pretrained=True):
@@ -176,10 +176,10 @@ class GroupedPyramidFeatures(nn.Module):
         
         out_size = p3.shape[-2:]
 
-        p7_up = K.upsample(p7, size=out_size, mode='nearest')
-        p6_up = K.upsample(p6, size=out_size, mode='nearest')
-        p5_up = K.upsample(p5, size=out_size, mode='nearest')
-        p4_up = K.upsample(p4, size=out_size, mode='nearest')
+        p7_up = F.upsample(p7, size=out_size, mode='nearest')
+        p6_up = F.upsample(p6, size=out_size, mode='nearest')
+        p5_up = F.upsample(p5, size=out_size, mode='nearest')
+        p4_up = F.upsample(p4, size=out_size, mode='nearest')
 
         out  = torch.cat((p3, p4_up, p5_up, p6_up, p7_up), 1)
         
