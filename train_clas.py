@@ -5,6 +5,7 @@ import torchvision.models as models
 from dataset import Dataset
 from transforms import get_transform
 from resnet_class import resnet18_classifier
+import numpy as np
 
 
 pretrained = True
@@ -18,6 +19,8 @@ def evaluate_model(model, data_loader_val, criterion, epoch):
 
     model.eval()
 
+    loss_cat = []
+
     for idx, (images, labels) in enumerate(data_loader_val):
         a = 1
         images, labels = images.to(device), labels.to(device)
@@ -29,18 +32,18 @@ def evaluate_model(model, data_loader_val, criterion, epoch):
 
         if idx == 0:
             error_cat = error
-            loss_cat = loss
-        else:
+        elif idx == 1:
             error_cat = torch.cat([error_cat, error], 0)
-            loss_cat = torch.cat([loss_cat, error], 0)
 
-    error = 100 * torch.mean(torch.abs(error_cat), 0)
+        loss_cat.append(loss.item())
 
-    loss = torch.mean(torch.abs(loss_cat), 0)
+    err = 100 * torch.mean(torch.abs(error_cat), 0)
 
-    print("EPOCH", epoch, ":", "Fish error", error[0].item(), "Background error", error[1].item(), "Loss", loss)
+    loss = np.sum(np.abs(loss_cat), 0)
 
-    return loss, error
+    print("EPOCH", epoch, ":", "Fish error", err[0].item(), "Background error", err[1].item(), "Loss", loss)
+
+    return loss, err
 
 """ Training script """
 if __name__ == '__main__':
