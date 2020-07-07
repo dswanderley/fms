@@ -221,6 +221,23 @@ class MetricLogger(object):
 def collate_fn(batch):
     return tuple(zip(*batch))
 
+def collate_fn_class(batch):
+
+    images = []
+    labels = []
+
+    for imdata in batch:
+        img = imdata[0]
+        datadict = imdata[1]
+        label = torch.tensor([1., 0.]) if len(datadict['labels']) else torch.tensor([0., 1.])
+
+        images.append(img)
+        labels.append(label)
+
+    images = torch.stack(images)
+    labels = torch.stack(labels)
+
+    return images, labels
 
 def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
 

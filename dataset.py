@@ -114,3 +114,13 @@ def load_labels(path_to_csv):
                     bboxs.append(bbox)
     """
     return labels
+
+
+def collate_fn_clas(self, batch):
+    '''
+        Collate function for classification task
+    '''
+
+    
+
+    return batch
