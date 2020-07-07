@@ -18,9 +18,9 @@ from models.deeplab import DeepLabv3
 DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
 
 # Backbone name
-backbone_name = 'resnet50'
+backbone_name = 'resnet18'
 # Neck name
-neck_name  = 'deeplab' # 'fpn'  # 'None'
+neck_name  = 'fpn' # 'deeplab'  # 'None'
 # Weights definitions
 load_weigths = False
 SAVE_MODEL = ('fasterRCNN_' + str(backbone_name) + '_' + str(neck_name) )
@@ -78,7 +78,9 @@ if __name__ == '__main__':
         featmap_names=["0"], output_size=7, sampling_ratio=2
     )
 
-
+    #from torchvision.models.detection import roi_heads, rpn
+    #roi_heads.fastrcnn_loss
+    
     # put the pieces together inside a FasterRCNN model
     # one class for fish, other for the backgroud
     model = FasterRCNN(
@@ -86,8 +88,10 @@ if __name__ == '__main__':
         num_classes=2,
         rpn_anchor_generator=anchor_generator,
         box_roi_pool=roi_pooler,
-        min_size=300, max_size=300
+        min_size=512, max_size=840
     )
+
+    #model.rpn.compute_loss
 
     # See the model architecture
     print(model)
