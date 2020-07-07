@@ -8,9 +8,30 @@ from transforms import get_transform
 
 pretrained = True
 num_epochs = 30
-batch_size = 4
+batch_size = 20
 num_workers = 1
-DATA_DIR = '../dataset/train/' 
+DATA_DIR = '../dataset/train/'
+
+@torch.no_grad()
+def evaluate_model(model, data_loader_val, epoch):
+
+    model.eval()
+
+    for idx, (images, labels) in enumerate(data_loader_val):
+        a = 1
+        images, labels = images.to(device), labels.to(device)
+        outputs = model.forward(images)
+
+        error = labels - outputs
+
+        if idx == 0:
+            error_cat = error
+        else:
+            error_cat = torch.cat([error_cat, error], 0)
+
+    error = 100 * torch.mean(torch.abs(error_cat), 0)
+
+    print("EPOCH", epoch, ":", "Fish error", error[0].item(), "Background error", error[1].item())
 
 """ Training script """
 if __name__ == '__main__':
@@ -54,9 +75,13 @@ if __name__ == '__main__':
 
     for epoch in range(num_epochs):
 
+        print("epoch", epoch)
+
         # TRAIN
         model.train()
-        for images, labels in data_loader:
+
+        batch_num = 0
+        for idx, (images, labels) in enumerate(data_loader):
 
             images, labels = images.to(device), labels.to(device)
 
@@ -66,8 +91,18 @@ if __name__ == '__main__':
 
             loss.backward()
             optimizer.step()
-        # VAL
-        
+
+            print("batch", idx, "/", len(data_loader)-1, "loss :", loss.item())
+
+        evaluate_model(model, data_loader_val, criterion, epoch)
+
+
+            # VAL
+
+
+
+
+
 
 # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
 
