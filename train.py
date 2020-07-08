@@ -31,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=4, help="number of workers")
     parser.add_argument("--data_dir", type=str, default="vm", help="dataset dir")
     parser.add_argument("--load_weights", type=int, default=0, help="to load weights")
+    parser.add_argument("--min_size", type=int, default=600, help="image minimum size")
+    parser.add_argument("--max_size", type=int, default=600, help="maximum size")
 
     opt = parser.parse_args()
     print(opt)
@@ -57,6 +59,10 @@ if __name__ == "__main__":
 
     # Number of images in a batch
     batch_size = opt.batch_size
+
+    # Image size
+    max_size = opt.max_size
+    min_size = opt.min_size
         
     # load a pre-trained model for classification and return
     # only the features
@@ -104,7 +110,7 @@ if __name__ == "__main__":
         num_classes=2,
         rpn_anchor_generator=anchor_generator,
         box_roi_pool=roi_pooler,
-        min_size=600, max_size=600
+        min_size=min_size, max_size=max_size
     )
 
     #model.rpn.compute_loss
