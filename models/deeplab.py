@@ -135,7 +135,7 @@ class DeepLabv3Plus(nn.Module):
         # Neck
         self.aspp = ASPP(featues[4], [12, 24, 36])
         self.global_pool = nn.Sequential( nn.AdaptiveAvgPool2d((1, 1)),
-                                        nn.Conv2d(2048, 256, 1, stride=1, bias=False),
+                                        nn.Conv2d(featues[4], 256, 1, stride=1, bias=False),
                                         nn.BatchNorm2d(256),
                                         nn.ReLU() )
 
@@ -178,7 +178,7 @@ class DeepLabv3Plus(nn.Module):
         # Combination
         z = torch.cat((x4, y), dim=1)
         z = self.conv3(z)
-        z = F.interpolate(z, size=x.shape[2:], mode='bilinear', align_corners=True)
+        #z = F.interpolate(z, size=x.shape[2:], mode='bilinear', align_corners=True)
 
         return z
 
