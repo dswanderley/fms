@@ -153,6 +153,8 @@ class DeepLabv3Plus(nn.Module):
         self.conv2.add_module('4', nn.BatchNorm2d(256))
         self.conv2.add_module('5', nn.ReLU())
         self.conv2.add_module('6', nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
+        # Dropout
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
         # Backbone
@@ -170,7 +172,7 @@ class DeepLabv3Plus(nn.Module):
         z = torch.cat((x2, y), dim=1)
         z = self.conv2(z)
         # z = F.interpolate(z, size=x.shape[2:], mode='bilinear', align_corners=True)
-
+        z = self.dropout(z)
         return z
 
 
