@@ -9,10 +9,13 @@ import numpy as np
 
 
 pretrained = True
-num_epochs = 30
+num_epochs = 50
 batch_size = 20
 num_workers = 1
 DATA_DIR = '../dataset/train/'
+
+SAVE_MODEL = ('resnet18_classifier')
+load_weigths = True
 
 @torch.no_grad()
 def evaluate_model(model, data_loader_val, criterion, epoch):
@@ -51,10 +54,13 @@ if __name__ == '__main__':
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(device)
 
-    backbone = models.resnet18(pretrained=pretrained)
-    #model = models.resnext50_32x4d(pretrained=pretrained)
+    if load_weigths:
+        model = torch.load(SAVE_MODEL)
+    else:
+        backbone = models.resnet18(pretrained=pretrained)
+        #model = models.resnext50_32x4d(pretrained=pretrained)
 
-    model = resnet18_classifier(backbone)
+        model = resnet18_classifier(backbone)
 
     #if load_weigths:
     #    model = torch.load(SAVE_MODEL)
@@ -82,8 +88,8 @@ if __name__ == '__main__':
 
 
     criterion = nn.BCELoss()
-    #optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-    optimizer = torch.optim.Adam(model.parameters())
+    #optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
 
     best_loss = float("inf")
 
@@ -113,6 +119,7 @@ if __name__ == '__main__':
         if best_loss > new_loss:
             torch.save(model, "resnet18_classifier")
             print('Model Saved. error', error)
+            best_loss = new_loss
 
     torch.save(model, "resnet18_final")
 
