@@ -9,7 +9,7 @@ from dataset import Dataset
 from transforms import get_transform
 from models.backbones import get_backbone
 from models.fpn import GroupedPyramidFeatures
-from models.deeplab import DeepLabv3
+from models.deeplab import DeepLabv3Plus
 
 
 """ Training parameters """
@@ -20,7 +20,7 @@ DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the bac
 # Backbone name
 backbone_name = 'resnet18'
 # Neck name
-neck_name  = 'fpn' # 'deeplab'  # 'None'
+neck_name  = 'deeplab' # 'fpn'  # 'None'
 # Weights definitions
 load_weigths = False
 SAVE_MODEL = ('fasterRCNN_' + str(backbone_name) + '_' + str(neck_name) )
@@ -32,7 +32,7 @@ num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
 num_epochs = 50
 
 # Number of images in a batch
-batch_size = 6
+batch_size = 4
 
 # Save condition
 val_mAP = 0
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         backbone = GroupedPyramidFeatures(backbone_name=backbone_name, out_features=out_channels, pretrained=True)
     elif neck_name == 'deeplab':
         out_channels = 256
-        backbone = DeepLabv3(n_classes=out_channels, backbone_name=backbone_name, pretrained=True)
+        backbone = DeepLabv3Plus(n_classes=out_channels, backbone_name=backbone_name, pretrained=True)
     else:
         backbone, out_channels = get_backbone(backbone_name, pretrained=True)
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
         num_classes=2,
         rpn_anchor_generator=anchor_generator,
         box_roi_pool=roi_pooler,
-        min_size=512, max_size=840
+        min_size=600, max_size=600
     )
 
     #model.rpn.compute_loss
