@@ -1,3 +1,5 @@
+
+import argparse
 import torch
 import torch.utils.data
 import torchvision
@@ -13,34 +15,48 @@ from models.deeplab import DeepLabv3Plus
 
 
 """ Training parameters """
-
-#DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
-DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
-
-# Backbone name
-backbone_name = 'resnet18'
-# Neck name
-neck_name  = 'deeplab' # 'fpn'  # 'None'
-# Weights definitions
-load_weigths = False
-SAVE_MODEL = ('fasterRCNN_' + str(backbone_name) + '_' + str(neck_name) )
-
-# number of processes 
-num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
-
-# Training epochs
-num_epochs = 50
-
-# Number of images in a batch
-batch_size = 4
-
 # Save condition
 val_mAP = 0
 
 
 """ Training script """
+if __name__ == "__main__":
 
-if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    # Training parameters
+    parser.add_argument("--backbone", type=str, default="resnet18", help="backbone name")
+    parser.add_argument("--neck", type=str, default="deeplab", help="network neck name")
+    parser.add_argument("--num_epochs", type=int, default=50, help="size of each image batch")
+    parser.add_argument("--batch_size", type=int, default=6, help="number of workers")
+    parser.add_argument("--num_workers", type=int, default=4, help="number of workers")
+    parser.add_argument("--data_dir", type=str, default="vm", help="dataset dir")
+    parser.add_argument("--load_weights", type=int, default=0, help="to load weights")
+
+    opt = parser.parse_args()
+    print(opt)
+
+    # Dataset path
+    if opt.data_dir == 'vm':
+        DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
+    else:
+        DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
+
+    # Backbone name
+    backbone_name = opt.backbone
+    # Neck name
+    neck_name  = opt.neck
+    # Weights definitions
+    load_weigths = True if opt.load_weights == 1 else False
+    SAVE_MODEL = ('fasterRCNN_' + str(backbone_name) + '_' + str(neck_name) )
+
+    # number of processes 
+    num_workers = opt.num_workers         # 4 for VISUM VM and 1 for our Windows machines
+
+    # Training epochs
+    num_epochs = opt.num_epochs
+
+    # Number of images in a batch
+    batch_size = opt.batch_size
         
     # load a pre-trained model for classification and return
     # only the features
