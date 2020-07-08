@@ -1,7 +1,7 @@
 import torch
 import torch.utils.data
 import torchvision
-from torchvision.models.detection import FasterRCNN
+# from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
 from engine import train_one_epoch, evaluate
 import utils
@@ -10,7 +10,7 @@ from transforms import get_transform
 from models.backbones import get_backbone
 from models.fpn import GroupedPyramidFeatures
 from models.deeplab import DeepLabv3Plus
-
+from models.frcnn_focal_loss import MyFasterRCNN
 
 """ Training parameters """
 
@@ -32,16 +32,14 @@ num_workers = 1         # 4 for VISUM VM and 1 for our Windows machines
 num_epochs = 50
 
 # Number of images in a batch
-batch_size = 4
+batch_size = 7
 
-# Save condition
 val_mAP = 0
-
 
 """ Training script """
 
 if __name__ == '__main__':
-        
+
     # load a pre-trained model for classification and return
     # only the features
     if neck_name == 'fpn':
@@ -78,20 +76,15 @@ if __name__ == '__main__':
         featmap_names=["0"], output_size=7, sampling_ratio=2
     )
 
-    #from torchvision.models.detection import roi_heads, rpn
-    #roi_heads.fastrcnn_loss
-    
     # put the pieces together inside a FasterRCNN model
     # one class for fish, other for the backgroud
-    model = FasterRCNN(
+    model = MyFasterRCNN(
         backbone,
         num_classes=2,
         rpn_anchor_generator=anchor_generator,
         box_roi_pool=roi_pooler,
         min_size=600, max_size=600
     )
-
-    #model.rpn.compute_loss
 
     # See the model architecture
     print(model)
