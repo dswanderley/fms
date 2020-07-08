@@ -7,7 +7,8 @@ from torchvision.ops import nms
 
 NMS_THRESHOLD = 0.1
 SAVED_MODEL = 'fasterRCNN'
-DATA_DIR = '/home/master/dataset/test/'
+#DATA_DIR = '/home/master/dataset/test/'
+DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
 
 # Load dataset
 dataset_test = Test_Dataset(DATA_DIR, transforms=get_test_transform())
@@ -19,6 +20,8 @@ model = torch.load(SAVED_MODEL)
 model.to(device)
 
 predictions = list()
+
+mytest = []
 
 for ii, (img, seq, frame) in enumerate(dataset_test):
     if ii%50 == 0:
@@ -36,7 +39,12 @@ for ii, (img, seq, frame) in enumerate(dataset_test):
 
     nms_boxes = boxes[nms_indices].tolist()
     nms_scores = scores[nms_indices].tolist()
-        
+
+    if len(nms_boxes) > 0:
+        mytest.append([int(seq), int(frame), len(nms_scores), min(nms_scores), max(nms_scores)])
+    else:
+        mytest.append([int(seq), int(frame), 0, 0, 0])
+
     # if there are no detections there is no need to include that entry in the predictions
     if len(nms_boxes) > 0:
         for bb, score in zip(nms_boxes, nms_scores):
