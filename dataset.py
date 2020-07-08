@@ -63,10 +63,11 @@ class Test_Dataset(torch.utils.data.Dataset):
         for seq in sequences:
             seq_num = seq[-3::]
             img_files = glob(os.path.join(seq, "img*.jpg"))
+            seq_imgs = [None]*len(img_files)
             for img_f in img_files:
-
                 img_num = pattern.search(os.path.basename(img_f)).group(1)
-                self.imgs.append((img_f, seq_num, img_num))
+                seq_imgs[int(img_num)] = (img_f, seq_num, img_num)
+            self.imgs += seq_imgs
 
     def __getitem__(self, idx):
         img_file = self.imgs[idx][0]
