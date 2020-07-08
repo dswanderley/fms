@@ -12,7 +12,7 @@ import torchvision.models as models
 
 
 def get_backbone(name, pretrained=True):
-    """ 
+    """
     Returns the backone of a CNN and its number of output channels.
 
         Parameters:
@@ -23,7 +23,7 @@ def get_backbone(name, pretrained=True):
             backbone (Sequential):  The CNN backone warped as a torch.nn.Sequential object
             out_channels (int):     The depth of the last layer
     """
-    
+
     # Mobilenet
     if name == 'mobilenet':
         backbone = models.mobilenet_v2(pretrained=pretrained).features
