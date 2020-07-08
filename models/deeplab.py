@@ -126,59 +126,50 @@ class DeepLabv3(nn.Module):
 
 
 class DeepLabv3Plus(nn.Module):
-    def __init__(self, n_classes=256, backbone_name='resnet101', pretrained=False):
+    def __init__(self, n_classes=256, layer_base=1, backbone_name='resnet50', pretrained=False):
         super(DeepLabv3Plus, self).__init__()
 
+        # Parameters
+        self.layer_base = layer_base
         # Backbone
         self.backbone = ResNetBackbone(backbone_model=backbone_name, pretrained=pretrained)
         featues = self.backbone.features
+        self.low_features = featues[layer_base]
+        self.high_features = featues[-1]
         # Neck
-        self.aspp = ASPP(featues[4], [12, 24, 36])
-        self.global_pool = nn.Sequential( nn.AdaptiveAvgPool2d((1, 1)),
-                                        nn.Conv2d(featues[4], 256, 1, stride=1, bias=False),
-                                        nn.BatchNorm2d(256),
-                                        nn.ReLU() )
-
-        self.conv1 = nn.Sequential( nn.Conv2d(512, 256, 1, bias=False),#nn.Conv2d(1280, 256, 1, bias=False),
-                                    nn.BatchNorm2d(256),
-                                    nn.ReLU() )
-
-        self.relu = nn.ReLU()
-
+        self.aspp = ASPP(self.high_features, [12, 24, 36])
         # adopt [1x1, 48] for channel reduction.
-        self.conv2 = nn.Sequential( nn.Conv2d(featues[1], 48, 1, bias=False), #nn.Conv2d(256, 48, 1, bias=False),
-                                    nn.BatchNorm2d(48),
-                                    nn.ReLU() )
-
+        self.conv1 = nn.Sequential()
+        self.conv1.add_module('0', nn.Conv2d(self.low_features, 48, 1, bias=False) ) #nn.Conv2d(256, 48, 1, bias=False))
+        self.conv1.add_module('1', nn.BatchNorm2d(48))
+        self.conv1.add_module('2', nn.ReLU())
+        self.conv1.add_module('3', nn.Dropout(0.5))
         # Final conv block
-        self.conv3 = nn.Sequential()
-        self.conv3.add_module('0', nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False))
-        self.conv3.add_module('1', nn.BatchNorm2d(256))
-        self.conv3.add_module('2', nn.ReLU())
-        self.conv3.add_module('3', nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False))
-        self.conv3.add_module('4', nn.BatchNorm2d(256))
-        self.conv3.add_module('5', nn.ReLU())
-        self.conv3.add_module('6', nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
-
+        self.conv2 = nn.Sequential()
+        self.conv2.add_module('0', nn.Conv2d(304, 256, kernel_size=3, stride=1, padding=1, bias=False))
+        self.conv2.add_module('1', nn.BatchNorm2d(256))
+        self.conv2.add_module('2', nn.ReLU())
+        self.conv2.add_module('3', nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False))
+        self.conv2.add_module('4', nn.BatchNorm2d(256))
+        self.conv2.add_module('5', nn.ReLU())
+        self.conv2.add_module('6', nn.Conv2d(256, n_classes, kernel_size=1, stride=1))
 
     def forward(self, x):
         # Backbone
-        c2, _, _, c5 = self.backbone(x)
-        size = ( int(math.ceil(x.shape[-2]/4)), int(math.ceil(x.shape[-1]/4)) )
+        features = self.backbone(x)
+        x_low =  features[self.layer_base-1]
+        x_high = features[-1]
+        size = ( x_low.shape[-2], x_low.shape[-1] )
         # ASPP
-        x1 = self.aspp(c5)
-        x2 = self.global_pool(c5)
-        x2 = F.upsample(x2, size=x1.size()[2:], mode='bilinear', align_corners=True)
-        x3 = torch.cat((x1, x2), dim=1)
+        x1 = self.aspp(x_high)
         # Upsampling
-        x4 = self.conv1(x3)
-        x4 = F.interpolate( x4, mode='bilinear', align_corners=True, size=size )
+        x2 = F.interpolate( x1, mode='bilinear', align_corners=True, size=size )
         # Low Level
-        y = self.conv2(c2)
+        y = self.conv1(x_low)
         # Combination
-        z = torch.cat((x4, y), dim=1)
-        z = self.conv3(z)
-        #z = F.interpolate(z, size=x.shape[2:], mode='bilinear', align_corners=True)
+        z = torch.cat((x2, y), dim=1)
+        z = self.conv2(z)
+        # z = F.interpolate(z, size=x.shape[2:], mode='bilinear', align_corners=True)
 
         return z
 
