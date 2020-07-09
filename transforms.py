@@ -327,8 +327,8 @@ def get_transform(train):
         # and ground-truth for data augmentation
         transforms.append(RandomHorizontalFlip(0.5))
         transforms.append(RandomVerticalFlip(0.5))
-        transforms.append(RandomBlur(0.2))
-        transforms.append(RandomContrastLuminance(0.2))
+        transforms.append(RandomBlur(0.15))
+        transforms.append(RandomContrastLuminance(0.15))
         #transforms.append(RandomRotation(1))
         #transforms.append(RandomScale(1))
         
