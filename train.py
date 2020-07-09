@@ -48,9 +48,7 @@ if __name__ == "__main__":
     # Get sequence list
     sequences = [ int(folder.replace('seq','')) for _, dirnames, filenames in os.walk(DATA_DIR) for folder in dirnames if 'seq' in folder ]
     val_len = int(len(sequences) / 5)
-    seq_train = sequences[:-val_len]
-    seq_val = sequences[-val_len:]
-
+    
     # Device
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(device)
@@ -142,30 +140,39 @@ if __name__ == "__main__":
     # and a learning rate scheduler which decreases the learning rate
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
 
-    # use our dataset and defined transformations
-    dataset_train = Dataset(DATA_DIR, transforms=get_transform(train=True), sequences=seq_train)
-    dataset_val = Dataset(DATA_DIR, transforms=get_transform(train=False), sequences=seq_val)
-    
-    # define training and validation data loaders
-    data_loader = torch.utils.data.DataLoader(
-        dataset_train, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=utils.collate_fn
-    )
+    for k in [0,1]:
 
-    data_loader_val = torch.utils.data.DataLoader(
-        dataset_val, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=utils.collate_fn
-    )
+        if k == 0:
+            seq_train = sequences[:-val_len]
+            seq_val = sequences[-val_len:]
+        else:
+            seq_train = sequences[val_len:]
+            seq_val = sequences[:val_len]
 
-    # Training
-    for epoch in range(int(num_epochs)):
-        # train for one epoch, printing every 10 iterations
-        epoch_loss = train_one_epoch(model, optimizer, data_loader,
-                                        device, epoch, print_freq=10)
-        # update the learning rate
-        lr_scheduler.step()
-        # evaluate on the validation dataset
-        evaluator = evaluate(model, data_loader_val, dataset_val, device)
+        # use our dataset and defined transformations
+        dataset_train = Dataset(DATA_DIR, transforms=get_transform(train=True), sequences=seq_train)
+        dataset_val = Dataset(DATA_DIR, transforms=get_transform(train=False), sequences=seq_val)
+        
+        # define training and validation data loaders
+        data_loader = torch.utils.data.DataLoader(
+            dataset_train, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=utils.collate_fn
+        )
 
-        if val_mAP < evaluator[0]:
-            val_mAP = evaluator[0]
-            torch.save(model, SAVE_MODEL)
-            print('Model Saved. mAP = %1.6f' % val_mAP)
+        data_loader_val = torch.utils.data.DataLoader(
+            dataset_val, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=utils.collate_fn
+        )
+
+        # Training
+        for epoch in range(int(num_epochs)):
+            # train for one epoch, printing every 10 iterations
+            epoch_loss = train_one_epoch(model, optimizer, data_loader,
+                                            device, epoch, print_freq=10)
+            # update the learning rate
+            lr_scheduler.step()
+            # evaluate on the validation dataset
+            evaluator = evaluate(model, data_loader_val, dataset_val, device)
+
+            if val_mAP < evaluator[0]:
+                val_mAP = evaluator[0]
+                torch.save(model, SAVE_MODEL)
+                print('Model Saved. mAP = %1.6f' % val_mAP)
