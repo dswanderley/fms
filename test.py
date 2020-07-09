@@ -4,6 +4,7 @@ from transforms import get_test_transform
 from dataset import Test_Dataset
 import csv
 from torchvision.ops import nms
+import numpy as np
 
 NMS_THRESHOLD = 0.1
 SAVED_MODEL = 'fasterRCNN'
