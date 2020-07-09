@@ -5,7 +5,7 @@ import torch.utils.data
 import torchvision
 from torchvision.models.detection import FasterRCNN, fasterrcnn_resnet50_fpn
 
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, RegionProposalNetwork
 
 from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.models.detection.backbone_utils import resnet_fpn_backbone,BackboneWithFPN
@@ -32,9 +32,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Training parameters
     parser.add_argument("--backbone", type=str, default="resnet18", help="backbone name")
-    parser.add_argument("--neck", type=str, default="fpn", help="network neck name")
+    parser.add_argument("--neck", type=str, default="deeplab", help="network neck name")
     parser.add_argument("--num_epochs", type=int, default=50, help="size of each image batch")
-    parser.add_argument("--batch_size", type=int, default=1, help="number of workers")
+    parser.add_argument("--batch_size", type=int, default=4, help="number of workers")
     parser.add_argument("--num_workers", type=int, default=4, help="number of workers")
     parser.add_argument("--data_dir", type=str, default="local", help="dataset dir")
     parser.add_argument("--load_weights", type=int, default=0, help="to load weights")
@@ -70,66 +70,59 @@ if __name__ == "__main__":
     # Image size
     max_size = opt.max_size
     min_size = opt.min_size
-
-    model = fasterrcnn_resnet50_fpn(pretrained=True, min_size=600, max_size=600)
+    
+    # Initial model 
+    model = fasterrcnn_resnet50_fpn(pretrained=True, min_size=min_size, max_size=max_size)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 2)
-        
+
     # load a pre-trained model for classification and return
     # only the features
     if neck_name == 'fpn':
         out_channels = 256
         backbone =  resnet_fpn_backbone(backbone_name, pretrained=True)
-    if neck_name == 'gfpn':
+        backbone.out_channels = out_channels
+        model.backbone = backbone
+    elif neck_name == 'gfpn':
         out_channels = 256
-        backbone = GroupedPyramidFeatures(backbone_name=backbone_name, out_features=out_channels, pretrained=True)        
+        backbone = GroupedPyramidFeatures(backbone_name=backbone_name, out_features=out_channels, pretrained=True)       
+        backbone.out_channels = out_channels 
+        model.backbone = backbone
     elif neck_name == 'deeplab':
         out_channels = 256
         backbone = DeepLabv3Plus(n_classes=out_channels, backbone_name=backbone_name, pretrained=True)
+        backbone.out_channels = out_channels
+        model.backbone = backbone
     else:
         backbone, out_channels = get_backbone(backbone_name, pretrained=True)
+        backbone.out_channels = out_channels
 
-    # FasterRCNN needs to know the number of
-    # output channels in a backbone. For mobilenet_v2, it's 12img
-    # so we need to add it here
-    backbone.out_channels = out_channels
+        # Anchors
+        anchor_generator = AnchorGenerator(
+            sizes=((32, 64, 128, 256),), aspect_ratios=((0.5, 1.0, 2.0),)
+        )
 
-    '''
-    # let's make the RPN generate 5 x 3 anchors per spatial
-    # location, with 5 different sizes and 3 different aspect
-    # ratios. We have a Tuple[Tuple[int]] because each featureimg
-    # map could potentially have different sizes and
-    # aspect ratios
-    anchor_generator = AnchorGenerator(
-        sizes=((32, 64, 128, 256),), aspect_ratios=((0.5, 1.0, 2.0),)
-    )
+        # let's define what are the feature maps that we will
+        # use to perform the region of interest cropping, as well as
+        # the size of the crop after rescaling.
+        # if your backbone returns a Tensor, featmap_names is expected to
+        # be [0]. More generally, the backbone should return an
+        # OrderedDict[Tensor], and in featmap_names you can choose which
+        # feature maps to use
+        roi_pooler = torchvision.ops.MultiScaleRoIAlign(
+            featmap_names=["0"], output_size=7, sampling_ratio=2
+        )
 
-    # let's define what are the feature maps that we will
-    # use to perform the region of interest cropping, as well as
-    # the size of the crop after rescaling.
-    # if your backbone returns a Tensor, featmap_names is expected to
-    # be [0]. More generally, the backbone should return an
-    # OrderedDict[Tensor], and in featmap_names you can choose which
-    # feature maps to use
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(
-        featmap_names=["0"], output_size=7, sampling_ratio=2
-    )
+        # put the pieces together inside a FasterRCNN model
+        # one class for fish, other for the backgroud
+        model = FasterRCNN(
+            backbone,
+            num_classes=2,
+            rpn_anchor_generator=anchor_generator,
+            box_roi_pool=roi_pooler,
+            min_size=min_size, max_size=max_size
+        )
 
-    #from torchvision.models.detection import roi_heads, rpn
-    #roi_heads.fastrcnn_loss
-    
-    # put the pieces together inside a FasterRCNN model
-    # one class for fish, other for the backgroud
-    model = FasterRCNN(
-        backbone,
-        num_classes=2,
-        rpn_anchor_generator=anchor_generator,
-        box_roi_pool=roi_pooler,
-        min_size=min_size, max_size=max_size
-    )
-
-    #model.rpn.compute_loss
-    '''
     # See the model architecture
     print(model)
 

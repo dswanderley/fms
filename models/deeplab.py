@@ -155,7 +155,7 @@ class DeepLabv3Plus(nn.Module):
 
         out = {
             '0': z,
-            '1': y
+            '1': x1
         }
         return out
 
