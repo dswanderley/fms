@@ -163,7 +163,7 @@ if __name__ == "__main__":
         )
 
         # Training
-        for epoch in range(int(num_epochs)):
+        for epoch in range(int(num_epochs/2)):
             # train for one epoch, printing every 10 iterations
             epoch_loss = train_one_epoch(model, optimizer, data_loader,
                                             device, epoch, print_freq=10)
