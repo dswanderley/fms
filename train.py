@@ -26,12 +26,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     # Training parameters
-    parser.add_argument("--backbone", type=str, default="resnet18", help="backbone name")
-    parser.add_argument("--neck", type=str, default="deeplab", help="network neck name")
-    parser.add_argument("--num_epochs", type=int, default=50, help="size of each image batch")
-    parser.add_argument("--batch_size", type=int, default=4, help="number of workers")
+    parser.add_argument("--backbone", type=str, default="resnext50", help="backbone name")
+    parser.add_argument("--neck", type=str, default="fpn", help="network neck name")
+    parser.add_argument("--num_epochs", type=int, default=40, help="size of each image batch")
+    parser.add_argument("--batch_size", type=int, default=18, help="number of workers")
     parser.add_argument("--num_workers", type=int, default=4, help="number of workers")
-    parser.add_argument("--data_dir", type=str, default="local", help="dataset dir")
+    parser.add_argument("--data_dir", type=str, default="vm", help="dataset dir")
     parser.add_argument("--load_weights", type=int, default=0, help="to load weights")
     parser.add_argument("--min_size", type=int, default=600, help="image minimum size")
     parser.add_argument("--max_size", type=int, default=600, help="maximum size")
