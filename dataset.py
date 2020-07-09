@@ -36,7 +36,7 @@ class Dataset(torch.utils.data.Dataset):
         image_id = torch.tensor([idx])
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         # suppose all instances are not crowd
-        iscrowd = torch.zeros((n_objs,), dtype=torch.int64)        
+        iscrowd = torch.zeros((n_objs,), dtype=torch.int64)
 
         target = {}
         target["boxes"] = boxes
@@ -47,7 +47,7 @@ class Dataset(torch.utils.data.Dataset):
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)
-        
+
         return img, target, (seq, frame)
 
     def __len__(self):
@@ -97,7 +97,7 @@ def load_labels(path_to_csv):
     """
     with open(path_to_csv, 'r') as f:
         for line in f.readlines()[1:]:
-            line = line.split(';')            
+            line = line.split(';')
             if len(line)==3:
                 boxes = eval(line[2])
             else:
@@ -106,7 +106,7 @@ def load_labels(path_to_csv):
 
             box = line[2][2:-3]
                 for char in '()':
-                    box = box.replace(char,'')            
+                    box = box.replace(char,'')
                 box = box.split(',')
                 bboxs = []
                 for bb in range(len(box)//4):
@@ -121,6 +121,6 @@ def collate_fn_clas(self, batch):
         Collate function for classification task
     '''
 
-    
+
 
     return batch

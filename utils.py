@@ -229,13 +229,14 @@ def collate_fn_class(batch):
     for imdata in batch:
         img = imdata[0]
         datadict = imdata[1]
-        label = torch.tensor([1., 0.]) if len(datadict['labels']) else torch.tensor([0., 1.])
+        #label = torch.tensor([1., 0.]) if len(datadict['labels']) else torch.tensor([0., 1.])
+        label = 1 if len(datadict['labels']) else 0
 
         images.append(img)
         labels.append(label)
 
     images = torch.stack(images)
-    labels = torch.stack(labels)
+    labels = torch.LongTensor(labels)
 
     return images, labels
 
