@@ -104,27 +104,6 @@ class ResNetBackbone(nn.Module):
         return x1, x2, x3, x4
 
 
-class DeepLabv3(nn.Module):
-    def __init__(self, n_classes=256, backbone_name='resnet101', pretrained=False):
-        super(DeepLabv3, self).__init__()
-
-        self.n_classes = n_classes
-        self.pretrained = pretrained
-        # Backbone
-        self.backbone, num_features = get_backbone(backbone_name, pretrained=True)
-        # Head
-        self.classifier = DeepLabHead(num_features, n_classes)
-        # model
-        #self.deeplab = DeepLabV3(backbone, head)
-
-    def forward(self, x):
-        feat = self.backbone(x)
-        x_out = self.classifier(feat)
-        #x_out = self.deeplab(x)
-
-        return x_out
-
-
 class DeepLabv3Plus(nn.Module):
     def __init__(self, n_classes=256, layer_base=1, backbone_name='resnet50', pretrained=False):
         super(DeepLabv3Plus, self).__init__()
@@ -173,7 +152,12 @@ class DeepLabv3Plus(nn.Module):
         z = self.conv2(z)
         # z = F.interpolate(z, size=x.shape[2:], mode='bilinear', align_corners=True)
         z = self.dropout(z)
-        return z
+
+        out = {
+            '0': z,
+            '1': y
+        }
+        return out
 
 
 if __name__ == "__main__":

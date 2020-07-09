@@ -3,15 +3,22 @@ import argparse
 import torch
 import torch.utils.data
 import torchvision
-from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection import FasterRCNN, fasterrcnn_resnet50_fpn
+
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+
 from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone,BackboneWithFPN
 from engine import train_one_epoch, evaluate
 import utils
 from dataset import Dataset
 from transforms import get_transform
-from models.backbones import get_backbone
+from models.backbones import get_backbone, get_model
 from models.fpn import GroupedPyramidFeatures
 from models.deeplab import DeepLabv3Plus
+
+from torchvision import models
+from torchvision.models._utils import IntermediateLayerGetter
 
 
 """ Training parameters """
@@ -25,11 +32,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Training parameters
     parser.add_argument("--backbone", type=str, default="resnet18", help="backbone name")
-    parser.add_argument("--neck", type=str, default="deeplab", help="network neck name")
+    parser.add_argument("--neck", type=str, default="fpn", help="network neck name")
     parser.add_argument("--num_epochs", type=int, default=50, help="size of each image batch")
-    parser.add_argument("--batch_size", type=int, default=6, help="number of workers")
+    parser.add_argument("--batch_size", type=int, default=1, help="number of workers")
     parser.add_argument("--num_workers", type=int, default=4, help="number of workers")
-    parser.add_argument("--data_dir", type=str, default="vm", help="dataset dir")
+    parser.add_argument("--data_dir", type=str, default="local", help="dataset dir")
     parser.add_argument("--load_weights", type=int, default=0, help="to load weights")
     parser.add_argument("--min_size", type=int, default=600, help="image minimum size")
     parser.add_argument("--max_size", type=int, default=600, help="maximum size")
@@ -63,12 +70,19 @@ if __name__ == "__main__":
     # Image size
     max_size = opt.max_size
     min_size = opt.min_size
+
+    model = fasterrcnn_resnet50_fpn(pretrained=True, min_size=600, max_size=600)
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 2)
         
     # load a pre-trained model for classification and return
     # only the features
     if neck_name == 'fpn':
         out_channels = 256
-        backbone = GroupedPyramidFeatures(backbone_name=backbone_name, out_features=out_channels, pretrained=True)
+        backbone =  resnet_fpn_backbone(backbone_name, pretrained=True)
+    if neck_name == 'gfpn':
+        out_channels = 256
+        backbone = GroupedPyramidFeatures(backbone_name=backbone_name, out_features=out_channels, pretrained=True)        
     elif neck_name == 'deeplab':
         out_channels = 256
         backbone = DeepLabv3Plus(n_classes=out_channels, backbone_name=backbone_name, pretrained=True)
@@ -80,6 +94,7 @@ if __name__ == "__main__":
     # so we need to add it here
     backbone.out_channels = out_channels
 
+    '''
     # let's make the RPN generate 5 x 3 anchors per spatial
     # location, with 5 different sizes and 3 different aspect
     # ratios. We have a Tuple[Tuple[int]] because each featureimg
@@ -114,7 +129,7 @@ if __name__ == "__main__":
     )
 
     #model.rpn.compute_loss
-
+    '''
     # See the model architecture
     print(model)
 
