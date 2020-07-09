@@ -4,7 +4,7 @@ import kornia
 import numpy as np
 from torchvision.transforms import functional as F
 import torchvision
-from albumentations.augmentations import transforms as T
+from torchvision.transforms import transforms as T
 import cv2
 
 def _flip_coco_person_keypoints(kps, width):
@@ -25,7 +25,6 @@ class Compose(object):
         for t in self.transforms:
             image, target = t(image, target)
         return image, target
-
 
 class RandomHorizontalFlip(object):
     def __init__(self, prob):
@@ -52,13 +51,13 @@ class RandomRotation(object):
 
     def __call__(self, image, target):
         if random.random() < self.prob:
-            w, h = image.shape[2], image.shape[1]
+            h, w = image.shape[1:]
 
             # Debug
-            from matplotlib import pyplot as plt
-            plt.figure()
-            plt.imshow(image.numpy().transpose(1, 2, 0))
-            plt.show()
+            # from matplotlib import pyplot as plt
+            # plt.figure()
+            # plt.imshow(image.numpy().transpose(1, 2, 0))
+            # plt.show()
             
             # rotate image in random[0, 40] degrees (right or left) 
             # from the center of the image
@@ -74,34 +73,29 @@ class RandomRotation(object):
                 corners[:,:8] = self.rotate_box(corners, angle, w//2, h//2, w, h)
                 new_bboxes = self.get_enclosing_box(corners)
 
-                # Debug
-                import matplotlib.pyplot as plt
-                import matplotlib.patches as pat
+                # # Debug
+                # import matplotlib.pyplot as plt
+                # import matplotlib.patches as pat
                 
-                fig, ax = plt.subplots(1)
-                plt.imshow(image)
-                for bbox in target["boxes"]:
-                    if bbox.shape[0] != 0:
-                        rect = pat.Rectangle([int(bbox[0]), int(bbox[1])], # x, y
-                                            int(bbox[2] - bbox[0]),  # w
-                                            int(bbox[3] - bbox[1]),  # h
-                                            edgecolor='g', linewidth=3, fill=False)
-                        ax.add_patch(rect)
-                for bbox in new_bboxes:
-                    if bbox.shape[0] != 0:
-                        rect = pat.Rectangle([int(bbox[0]), int(bbox[1])], # x, y
-                                            int(bbox[2] - bbox[0]),  # w
-                                            int(bbox[3] - bbox[1]),  # h
-                                            edgecolor='r', linewidth=3, fill=False)
-                        ax.add_patch(rect)
-                plt.show()
-
+                # fig, ax = plt.subplots(1)
+                # plt.imshow(image)
+                # for bbox in target["boxes"]:
+                #     if bbox.shape[0] != 0:
+                #         rect = pat.Rectangle([int(bbox[0]), int(bbox[1])], # x, y
+                #                             int(bbox[2] - bbox[0]),  # w
+                #                             int(bbox[3] - bbox[1]),  # h
+                #                             edgecolor='g', linewidth=3, fill=False)
+                #         ax.add_patch(rect)
+                # for bbox in new_bboxes:
+                #     if bbox.shape[0] != 0:
+                #         rect = pat.Rectangle([int(bbox[0]), int(bbox[1])], # x, y
+                #                             int(bbox[2] - bbox[0]),  # w
+                #                             int(bbox[3] - bbox[1]),  # h
+                #                             edgecolor='r', linewidth=3, fill=False)
+                #         ax.add_patch(rect)
+                # plt.show()
 
                 target["boxes"] = new_bboxes
-
-            # plt.figure()
-            # plt.imshow(image)
-            # plt.show()
 
             image = F.to_tensor(image)
 
@@ -185,10 +179,98 @@ class RandomBlur(object):
             plt.imshow(blur_image[0].numpy().transpose(1, 2, 0))
             plt.show()
             '''
-            image = blur_image
+            image = blur_image[0]
 
         return image, target
-        
+
+class RandomScale(object):
+    def __init__(self, prob):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            h, w = image.shape[1], image.shape[2]
+
+            # Debug
+            from matplotlib import pyplot as plt
+            plt.figure()
+            plt.imshow(image.numpy().transpose(1, 2, 0))
+            plt.show()
+
+            # transform to PIL image
+            image = F.to_pil_image(image)
+            # scale image
+            # scale = T.RandomResizedCrop( (h, w), scale=(0.6, 1.0), ratio=(w/h, w/h), interpolation=2)
+            # image = scale(image)
+
+            # scale image
+            s = random.uniform(0.5, 1.0)
+            resize_scale = 1 + s
+            #image = cv2.resize(image, None, fx=resize_scale, fy=resize_scale)
+            scale = T.RandomResizedCrop( (h, w), scale=(s, s), ratio=(w/h, w/h), interpolation=2)
+            image = scale(image)
+            image = F.to_tensor(image)
+
+            # scale bboxes
+            if len(target["boxes"]) > 0:
+                
+
+                # Debug
+                import matplotlib.pyplot as plt
+                import matplotlib.patches as pat
+                
+                fig, ax = plt.subplots(1)
+                plt.imshow(image.numpy().transpose(1, 2, 0))
+                for bbox in target["boxes"]:
+                    if bbox.shape[0] != 0:
+                        rect = pat.Rectangle([int(bbox[0]), int(bbox[1])], # x, y
+                                            int(bbox[2] - bbox[0]),  # w
+                                            int(bbox[3] - bbox[1]),  # h
+                                            edgecolor='g', linewidth=3, fill=False)
+                        ax.add_patch(rect)
+
+                bboxes = target["boxes"]
+                bboxes[:,:4] *= resize_scale
+
+                for bbox in bboxes:
+                    if bbox.shape[0] != 0:
+                        rect = pat.Rectangle([int(bbox[0]), int(bbox[1])], # x, y
+                                            int(bbox[2] - bbox[0]),  # w
+                                            int(bbox[3] - bbox[1]),  # h
+                                            edgecolor='r', linewidth=3, fill=False)
+                        ax.add_patch(rect)
+                plt.show()
+            
+        return image, target
+
+class RandomContrastLuminance(object):
+    def __init__(self, prob):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+
+             # Debug
+            # from matplotlib import pyplot as plt
+            # plt.figure()
+            # plt.imshow(image.numpy().transpose(1, 2, 0))
+            # plt.show()
+
+            # transform to PIL image
+            if (image.shape==3):
+                image = F.to_pil_image(image)
+                # apply brightness to the image
+                contrast = T.ColorJitter(brightness=1.0, contrast=0.5, saturation=0.0, hue=0.0)
+                image = contrast(image)
+                image = F.to_tensor(image)
+
+                # Debug
+                # plt.figure()
+                # plt.imshow(image.numpy().transpose(1, 2, 0))
+                # plt.show()
+            
+        return image, target
+
 class RandomVerticalFlip(object):
     def __init__(self, prob):
         self.prob = prob
@@ -230,7 +312,6 @@ class RandomVerticalFlip(object):
             """
         return image, target
 
-
 class ToTensor(object):
     def __call__(self, image, target):
         image = F.to_tensor(image)
@@ -247,7 +328,10 @@ def get_transform(train):
         transforms.append(RandomHorizontalFlip(0.5))
         transforms.append(RandomVerticalFlip(0.5))
         transforms.append(RandomBlur(0.2))
-        transforms.append(RandomRotation(1))
+        transforms.append(RandomContrastLuminance(0.2))
+        #transforms.append(RandomRotation(1))
+        #transforms.append(RandomScale(1))
+        
     return Compose(transforms)
 
 # transform for images only (no labels)
