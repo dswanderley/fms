@@ -1,14 +1,12 @@
-
+import os
 import argparse
 import torch
 import torch.utils.data
 import torchvision
 from torchvision.models.detection import FasterRCNN, fasterrcnn_resnet50_fpn
-
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, RegionProposalNetwork
-
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.rpn import AnchorGenerator
-from torchvision.models.detection.backbone_utils import resnet_fpn_backbone,BackboneWithFPN
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 from engine import train_one_epoch, evaluate
 import utils
 from dataset import Dataset
@@ -16,9 +14,6 @@ from transforms import get_transform
 from models.backbones import get_backbone, get_model
 from models.fpn import GroupedPyramidFeatures
 from models.deeplab import DeepLabv3Plus
-
-from torchvision import models
-from torchvision.models._utils import IntermediateLayerGetter
 
 
 """ Training parameters """
@@ -49,6 +44,16 @@ if __name__ == "__main__":
         DATA_DIR = '/home/master/dataset/train/'   # VISUM VM path
     else:
         DATA_DIR = '../dataset/train/'              # Your PC path, don't forget the backslash in the end
+
+    # Get sequence list
+    sequences = [ int(folder.replace('seq','')) for _, dirnames, filenames in os.walk(DATA_DIR) for folder in dirnames if 'seq' in folder ]
+    val_len = int(len(sequences) / 5)
+    seq_train = sequences[:-val_len]
+    seq_val = sequences[-val_len:]
+
+    # Device
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    print(device)
 
     # Backbone name
     backbone_name = opt.backbone
@@ -126,29 +131,6 @@ if __name__ == "__main__":
     # See the model architecture
     print(model)
 
-    # use our dataset and defined transformations
-    dataset = Dataset(DATA_DIR, transforms=get_transform(train=True))
-    dataset_val = Dataset(DATA_DIR, transforms=get_transform(train=False))
-
-    # split the dataset into train and validation sets
-    torch.manual_seed(1)
-    indices = torch.randperm(len(dataset)).tolist()
-
-    dataset_sub = torch.utils.data.Subset(dataset, indices[:-500])
-    dataset_val_sub = torch.utils.data.Subset(dataset_val, indices[-500:])
-
-    # define training and validation data loaders
-    data_loader = torch.utils.data.DataLoader(
-        dataset_sub, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=utils.collate_fn
-    )
-
-    data_loader_val = torch.utils.data.DataLoader(
-        dataset_val_sub, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=utils.collate_fn
-    )
-
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    print(device)
-
     if load_weigths:
         model = torch.load(SAVE_MODEL)
     model.to(device)
@@ -160,7 +142,21 @@ if __name__ == "__main__":
     # and a learning rate scheduler which decreases the learning rate
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
 
-    for epoch in range(num_epochs):
+    # use our dataset and defined transformations
+    dataset_train = Dataset(DATA_DIR, transforms=get_transform(train=True), sequences=seq_train)
+    dataset_val = Dataset(DATA_DIR, transforms=get_transform(train=False), sequences=seq_val)
+    
+    # define training and validation data loaders
+    data_loader = torch.utils.data.DataLoader(
+        dataset_train, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=utils.collate_fn
+    )
+
+    data_loader_val = torch.utils.data.DataLoader(
+        dataset_val, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=utils.collate_fn
+    )
+
+    # Training
+    for epoch in range(int(num_epochs)):
         # train for one epoch, printing every 10 iterations
         epoch_loss = train_one_epoch(model, optimizer, data_loader,
                                         device, epoch, print_freq=10)

@@ -8,13 +8,19 @@ import csv
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, root, transforms=None):
+    def __init__(self, root, transforms=None, sequences=None):
         self.root = root
         self.transforms = transforms
+        self.sequences = sequences
 
         # load all image files
         self.ann_file = os.path.join(root, 'labels.csv')
-        self.ann = load_labels(self.ann_file)
+        annotations = load_labels(self.ann_file)
+        # Get annotations from sequences
+        if sequences:
+            self.ann =[x for x in annotations if int(x[0]) in sequences]
+        else:
+            self.ann = annotations
         self.n_imgs = len(self.ann)
 
     def __getitem__(self, idx):
@@ -53,6 +59,7 @@ class Dataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.n_imgs
 
+
 class Test_Dataset(torch.utils.data.Dataset):
     def __init__(self, root, transforms=None):
         self.root = root
@@ -81,6 +88,7 @@ class Test_Dataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
 
 def load_labels(path_to_csv):
     labels = []
