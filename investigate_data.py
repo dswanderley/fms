@@ -29,6 +29,10 @@ b_count_l2 = []
 b_count_l1 = []
 b_count_r1 = []
 b_count_r2 = []
+c_count_11 = []
+c_count_10 = []
+c_count_00 = []
+c_count_01 = []
 for seq in sequences:
     seq_frames = [ [s,f,gt] for (s,f,gt) in labels if s == seq ]
 
@@ -61,6 +65,16 @@ for seq in sequences:
             if right_2 == 1:
                 c_count_r2.append([seq, i])
 
+            if left_1 == 0 and right_1 == 0:
+                c_count_00.append([seq, i])
+            if left_1 == 0 and right_1 == 1:
+                c_count_01.append([seq, i])
+            if left_1 == 1 and right_1 == 0:
+                c_count_10.append([seq, i])
+            if left_1 == 1 and right_1 == 1:
+                c_count_11.append([seq, i]) 
+
+
         if data[2] == 0:
             b_count_c.append([seq, i])
             if left_2 == 1:
@@ -71,6 +85,8 @@ for seq in sequences:
                 b_count_r1.append([seq, i])
             if right_2 == 1:
                 b_count_r2.append([seq, i])
+
+      
 
 
 print('left  -2: ', len(c_count_l2)/len(c_count_c))
@@ -88,3 +104,11 @@ print('right +1: ', len(b_count_r1)/len(b_count_c))
 print('right +2: ', len(b_count_r2)/len(b_count_c))
 
 print('')
+
+
+
+print('0 1 0: ', len(c_count_00)/len(c_count_c))
+print('0 1 1: ', len(c_count_01)/len(c_count_c))
+print('1 1 0: ', len(c_count_10)/len(c_count_c))
+print('1 1 1: ', len(c_count_11)/len(c_count_c))
+
